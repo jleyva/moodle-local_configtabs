@@ -25,6 +25,13 @@
 				}
 				
 			}
+            
+            // Preseving html editor
+            var textAreaEls = YAHOO.util.Dom.getElementsByClassName('form-textarea', null, docForms[f]);
+            var htmlEditor = YAHOO.util.Dom.getElementsByClassName('htmlarea','div',docForms[f]);
+            for(var e in htmlEditor){                
+                htmlEditor[e].parentNode.removeChild(htmlEditor[e]);                
+            }           
 			
 			// This is for preserving the hide and show labels input properties
 			// When the DOM is updated, this properties are missing
@@ -46,7 +53,7 @@
 			for(var f in docForms){
 				var tabsIndex = [];
 				var iHTML = docForms[f].innerHTML;
-				var tabsList = '<ul id="tablist'+i+'" class="yui-nav"> ';
+				var tabsList = '<div class="tabtree"><ul id="tablist'+i+'" class="yui-nav"> ';
 				var fieldSets = YAHOO.util.Dom.getElementsByClassName('clearfix','fieldset',docForms[f]);
 				
 				if(fieldSets.length > 0){
@@ -54,16 +61,35 @@
 					selected = true;
 					for(var fs in fieldSets){
 						var className = (selected)? ' class="selected"': '';
+                        var classType = (fs == 0)? 'class="first"' : '';
+                        classType = (fs == fieldSets.length - 1)? 'class="last"' : '';
+                        
 						selected = false;
 						title = YAHOO.util.Dom.getFirstChild(fieldSets[fs]).innerHTML;
-						tabsList += '<li'+className+'><a href="#'+fieldSets[fs].id+'"><em>'+title+'</em></a></li>';
+                        
+                        if(title.indexOf('helplink') > -1){
+                            if(title.indexOf('<span') > -1)
+                                title = title.substring(0, title.indexOf('<span'));
+                            else if(title.indexOf('<SPAN') > -1){
+                                title = title.substring(0, title.indexOf('<SPAN'));
+                            }
+                        }
+                        
+						tabsList += '<li'+className+' '+classType+'><a href="#'+fieldSets[fs].id+'"><span><em>'+title+'</em></span></a></li>';
 						tabsIndex.push(fieldSets[fs].id);
 					}
-					tabsList += '</ul>';
-					
+					tabsList += '</ul></div>';
 										
 					// Only the first item is replaced
-					iHTML = iHTML.replace('<fieldset','<div class="yui-content"><fieldset');
+					//Not work for IEiHTML = iHTML.replace('<fieldset','<div class="yui-content"><fieldset');
+                    var fieldsetFirst = iHTML.indexOf('<fieldset');                    
+                    
+                    if(fieldsetFirst == -1)
+                        fieldsetFirst = iHTML.indexOf('<FIELDSET');                    
+                    
+                    var newNode = '<div class="yui-content">';
+                    iHTML = iHTML.substring(0, fieldsetFirst) + newNode + iHTML.substring(fieldsetFirst);                    
+                                                            
 					docForms[f].innerHTML = '<div class="yui-skin-sam"><div id="configtabs'+i+'" class="yui-navset">'+tabsList+iHTML+'</div></div></div>';
 					
 
@@ -111,6 +137,33 @@
 					}
 					
 				}
+                
+                // Restoring html editor
+                var editors = [];                
+                
+                if(! YAHOO.env.ua.ie){
+                    for(var i in textAreaEls){      
+                        
+                        if(YAHOO.util.Dom.getStyle(textAreaEls[i],'display') != 'none')
+                            continue;
+                            
+                        editors[i] = new HTMLArea(textAreaEls[i].id);
+                        var config = editors[i].config;
+                        config.pageStyle = "body { background-color: #ffffff; font-family: Trebuchet MS,Verdana,Arial,Helvetica,sans-serif; }";
+                        config.killWordOnPaste = true;
+                        config.fontname = {
+                        "Trebuchet":	'Trebuchet MS,Verdana,Arial,Helvetica,sans-serif',
+                        "Arial":	'arial,helvetica,sans-serif',
+                        "Courier New":	'courier new,courier,monospace',
+                        "Georgia":	'georgia,times new roman,times,serif',
+                        "Tahoma":	'tahoma,arial,helvetica,sans-serif',
+                        "Times New Roman":	'times new roman,times,serif',
+                        "Verdana":	'verdana,arial,helvetica,sans-serif',
+                        "Impact":	'impact',
+                        "Wingdings":	'wingdings'};
+                        editors[i].generate();
+                    }
+                }
 				
 				// Activate the tab with the new fields
 				if(configtabsAddFields){
